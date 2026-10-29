@@ -1,28 +1,20 @@
-import { createClient } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
-import * as schema from "@/lib/db/schema";
+import { MongoClient } from "mongodb";
 
-function resolveDatabaseUrl(): string {
-  if (process.env.TURSO_DATABASE_URL) return process.env.TURSO_DATABASE_URL;
-  if (process.env.LIBSQL_DATABASE_URL) return process.env.LIBSQL_DATABASE_URL;
-  if (process.env.VERCEL) return "file:/tmp/bazardor.db";
-  return "file:./bazardor.db";
-}
+const uri = process.env.MONGODB_URI?.trim();
+const databaseName = process.env.MONGODB_DB?.trim() || "bazardor";
 
+// Create the client without connecting during a build. ensureDatabase checks
+// that the real URI is configured before any authentication request uses it.
 const globalForDb = globalThis as unknown as {
-  __bazardorClient?: ReturnType<typeof createClient>;
+  __bazardorMongoClient?: MongoClient;
 };
 
-export const libsqlClient =
-  globalForDb.__bazardorClient ??
-  createClient({
-    url: resolveDatabaseUrl(),
-    authToken: process.env.TURSO_AUTH_TOKEN,
-  });
+export const mongoClient =
+  globalForDb.__bazardorMongoClient ??
+  new MongoClient(uri || "mongodb://127.0.0.1:27017");
 
 if (process.env.NODE_ENV !== "production") {
-  globalForDb.__bazardorClient = libsqlClient;
+  globalForDb.__bazardorMongoClient = mongoClient;
 }
 
-export const db = drizzle(libsqlClient, { schema });
-export { schema };
+export const db = mongoClient.db(databaseName);

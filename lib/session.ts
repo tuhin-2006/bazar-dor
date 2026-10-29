@@ -3,10 +3,11 @@ import { auth } from "@/lib/auth";
 import { ensureDatabase } from "@/lib/db/ensure";
 
 export async function getSession() {
+  const requestHeaders = await headers();
   await ensureDatabase();
 
   return auth.api.getSession({
-    headers: await headers(),
+    headers: requestHeaders,
   });
 }
 

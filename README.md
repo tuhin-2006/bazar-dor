@@ -24,7 +24,7 @@
 | Language | TypeScript |
 | Styling | Tailwind CSS 4 |
 | Auth | BetterAuth (email/password, Google, GitHub) |
-| Database | Drizzle ORM + libSQL (local SQLite or Turso) |
+| Database | MongoDB (MongoDB Atlas) |
 | Icons / UI | lucide-react, react-hot-toast |
 | Fonts | next/font — Hind Siliguri |
 | Product icons | Bundled Twemoji SVGs (CC-BY 4.0) |
@@ -38,14 +38,13 @@ npm install
 # 2. Create the local environment file
 cp .env.example .env.local
 
-# 3. Add a secret (any long random string)
-#    BETTER_AUTH_SECRET=...
+# 3. Set BETTER_AUTH_SECRET and your MongoDB Atlas MONGODB_URI in .env.local
 
 # 4. Start the development server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The SQLite database (`bazardor.db`) and the BetterAuth tables are created automatically on first use.
+Open [http://localhost:3000](http://localhost:3000). Better Auth creates MongoDB collections and indexes on first use.
 
 ### Environment variables
 
@@ -54,8 +53,8 @@ Open [http://localhost:3000](http://localhost:3000). The SQLite database (`bazar
 | `BETTER_AUTH_SECRET` | Yes | Signing secret for BetterAuth sessions. |
 | `BETTER_AUTH_URL` | Yes | Public URL of the app (`http://localhost:3000` in development). |
 | `NEXT_PUBLIC_SITE_URL` | Production | Canonical deployed URL used for metadata and trusted origins. |
-| `TURSO_DATABASE_URL` | Production | Remote libSQL/Turso database URL. Falls back to local SQLite when empty. |
-| `TURSO_AUTH_TOKEN` | Production | Turso access token. |
+| `MONGODB_URI` | Yes | MongoDB Atlas connection string. Keep it private. |
+| `MONGODB_DB` | No | Database name; defaults to `bazardor`. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional | Enables Google sign-in when both are set. |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | Optional | Enables GitHub sign-in when both are set. |
 
@@ -65,13 +64,11 @@ Step-by-step instructions (in Bengali) for creating the Google and GitHub apps: 
 
 ## 🗄️ Database & Auth Setup
 
-The app ships with a zero-config local setup:
+1. Create a MongoDB Atlas cluster and database user, and allow the application's IP address in Atlas Network Access.
+2. Paste the Atlas connection string into `MONGODB_URI` in `.env.local`. Set `MONGODB_DB` if you want a database name other than `bazardor`.
+3. `lib/db/index.ts` creates the MongoDB client; `lib/db/ensure.ts` creates indexes on first use. Better Auth stores users, sessions, accounts and verifications in MongoDB collections.
 
-1. `lib/db/index.ts` resolves the database URL (`TURSO_DATABASE_URL` → `LIBSQL_DATABASE_URL` → `/tmp/bazardor.db` on Vercel → `./bazardor.db` locally).
-2. `lib/db/ensure.ts` runs `CREATE TABLE IF NOT EXISTS` statements for `user`, `session`, `account` and `verification` on first request.
-3. Drizzle schema lives in `lib/db/schema.ts`; `npm run db:generate` / `npm run db:push` can be used with `drizzle-kit`.
-
-For production, create a free database at [Turso](https://turso.tech) and set `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` in your hosting environment.
+Existing SQLite data is not migrated automatically. The MongoDB adapter uses transactions and therefore requires an Atlas cluster or another replica set.
 
 ### OAuth callback URLs
 
@@ -91,8 +88,6 @@ npm run start   # Run the production build
 npm run lint    # Run ESLint
 npm run auth:check    # Show which OAuth providers are configured
 npm run data:refresh  # Refresh the local JSON API snapshot
-npm run db:generate   # Generate Drizzle migrations
-npm run db:push       # Push the Drizzle schema to the configured database
 ```
 
 ## ☁️ Deploying to Vercel
@@ -100,12 +95,10 @@ npm run db:push       # Push the Drizzle schema to the configured database
 1. Push the repository to GitHub.
 2. Import the project in Vercel.
 3. Add the environment variables from the table above (`BETTER_AUTH_URL` and `NEXT_PUBLIC_SITE_URL` should be your Vercel/custom domain).
-4. Deploy. The first auth request creates the tables automatically.
+4. Deploy. The first auth request creates the MongoDB indexes automatically.
 5. Add the production OAuth callback URLs to Google/GitHub if you enable social login.
 
-> **Note:** Vercel's filesystem is ephemeral. Without Turso (or another remote libSQL database), accounts created on a deployment will not persist across cold starts. Use Turso for any real deployment.
->
-> **Why protected pages used to bounce back to `/signin` on Vercel:** every route runs in its own serverless function with a separate `/tmp`, so a session saved in `/api/auth` was invisible to the function rendering `/product/[slug]` or `/profile`. Better Auth now caches the signed session in a signed cookie (`session.cookieCache` in `lib/auth.ts`), so those pages validate the session without reading the local database. Signing in and browsing now works without Turso; set `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` if accounts must survive cold starts and redeploys.
+Configure Atlas Network Access and the database user so the deployed application can connect to the cluster.
 
 ## 📁 Project Structure
 

@@ -108,9 +108,9 @@ npm run auth:check
 
 - একই ইমেইলে আগে ইমেইল/পাসওয়ার্ড অ্যাকাউন্ট থাকলে Google/GitHub লগইন
   অটো-লিংক হবে (`lib/auth.ts`-এ `accountLinking.trustedProviders`)।
-- বর্তমানে ডেটাবেজ SQLite/libSQL (লোকাল `bazardor.db`, প্রোডাকশনে Turso)।
-  MySQL/MongoDB লাগলে `lib/db` ও Better Auth adapter বদলাতে হবে — OAuth-এর
-  জন্য এটা বাধ্যতামূলক নয়।
+- বর্তমানে authentication ডেটা MongoDB-তে থাকে। `.env.local`-এ
+  `MONGODB_URI` ও প্রয়োজনে `MONGODB_DB` সেট করতে হবে। আগের SQLite ডেটা
+  স্বয়ংক্রিয়ভাবে MongoDB-তে স্থানান্তরিত হয় না।
 
 ---
 
