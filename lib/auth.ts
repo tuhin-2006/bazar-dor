@@ -68,6 +68,7 @@ export const auth = betterAuth({
           github: {
             clientId: process.env.GITHUB_CLIENT_ID as string,
             clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+            prompt: "select_account" as const,
             overrideUserInfoOnSignIn: true,
           },
         }
